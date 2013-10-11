@@ -1,0 +1,54 @@
+root@eagle-imx6:~# evtest /dev/input/event0 
+Input driver version is 1.0.1
+Input device ID: bus 0x3 vendor 0x1234 product 0xfedc version 0x1
+Input device name: "j36-test"
+Supported events:
+  Event type 0 (EV_SYN)
+  Event type 3 (EV_ABS)
+    Event code 48 (ABS_MT_TOUCH_MAJOR)
+      Value      0
+      Min        0
+      Max        0
+    Event code 50 (ABS_MT_WIDTH_MAJOR)
+      Value      0
+      Min        0
+      Max        0
+    Event code 53 (ABS_MT_POSITION_X)
+      Value      0
+      Min        0
+      Max      800
+    Event code 54 (ABS_MT_POSITION_Y)
+      Value      0
+      Min        0
+      Max      480
+    Event code 57 (ABS_MT_TRACKING_ID)
+      Value      0
+      Min        0
+      Max        0
+
+***********************************************
+  Event type 0 (EV_SYN)
+  Event type 3 (EV_ABS)
+    Event code 48 (ABS_MT_TOUCH_MAJOR)
+      Value      0
+      Min        0
+      Max      255
+    Event code 50 (ABS_MT_WIDTH_MAJOR)
+      Value      0
+      Min        0
+      Max      255
+    Event code 53 (ABS_MT_POSITION_X)
+      Value      0
+      Min        0
+      Max      800
+    Event code 54 (ABS_MT_POSITION_Y)
+      Value      0
+      Min        0
+      Max      480
+    Event code 57 (ABS_MT_TRACKING_ID)
+      Value      0
+      Min        0
+      Max        3
+Properties:
+Testing ... (interrupt to exit)
+
