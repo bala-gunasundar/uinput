@@ -108,65 +108,65 @@ int read_packet_in_loop(uint8_t *buf, uint8_t rsize, uint8_t max_try)
 		return -1;
 }
 
-int simulate_touch_event(void)
-{
-	struct input_event ev[6];
-	int i;
-	int ret;
-	uint8_t *bufp;
-	ssize_t wlen;
-	uint8_t len;
+/* int simulate_touch_event(void) */
+/* { */
+/* 	struct input_event ev[6]; */
+/* 	int i; */
+/* 	int ret; */
+/* 	uint8_t *bufp; */
+/* 	ssize_t wlen; */
+/* 	uint8_t len; */
 	
-	memset(ev, 0, sizeof(ev));
+/* 	memset(ev, 0, sizeof(ev)); */
 
-	ev[0].type = EV_ABS;
-	ev[0].code = ABS_MT_TRACKING_ID;
-	ev[0].value = 0;
+/* 	ev[0].type = EV_ABS; */
+/* 	ev[0].code = ABS_MT_TRACKING_ID; */
+/* 	ev[0].value = 0; */
 	
-	ev[1].type = EV_ABS;
-	ev[1].code = ABS_MT_TOUCH_MAJOR;
-	ev[1].value = 255;
+/* 	ev[1].type = EV_ABS; */
+/* 	ev[1].code = ABS_MT_TOUCH_MAJOR; */
+/* 	ev[1].value = 255; */
 		
-	ev[2].type = EV_ABS;
-	ev[2].code = ABS_MT_POSITION_X;
-	ev[2].value = 17920;
+/* 	ev[2].type = EV_ABS; */
+/* 	ev[2].code = ABS_MT_POSITION_X; */
+/* 	ev[2].value = 17920; */
 		
-	ev[3].type = EV_ABS;
-	ev[3].code = ABS_MT_POSITION_Y;
-	ev[3].value = 16048;
+/* 	ev[3].type = EV_ABS; */
+/* 	ev[3].code = ABS_MT_POSITION_Y; */
+/* 	ev[3].value = 16048; */
 		
-	ev[4].type = EV_SYN;
-	ev[4].code = SYN_MT_REPORT;
+/* 	ev[4].type = EV_SYN; */
+/* 	ev[4].code = SYN_MT_REPORT; */
 		
-	ev[5].type = EV_SYN;
-	ev[5].code= SYN_REPORT;
+/* 	ev[5].type = EV_SYN; */
+/* 	ev[5].code= SYN_REPORT; */
 
-	bufp = (uint8_t *) ev;
-	len = sizeof(ev);
+/* 	bufp = (uint8_t *) ev; */
+/* 	len = sizeof(ev); */
 
-	do {
-		wlen = write(fd, bufp, sizeof(ev));
-		if (wlen < 0) {
-			error(0, errno, "Error while inj events");
-			return -1;
-		}
+/* 	do { */
+/* 		wlen = write(fd, bufp, sizeof(ev)); */
+/* 		if (wlen < 0) { */
+/* 			error(0, errno, "Error while inj events"); */
+/* 			return -1; */
+/* 		} */
 		
-		bufp += wlen;
-		len -= wlen;
+/* 		bufp += wlen; */
+/* 		len -= wlen; */
 			
-	} while (len != 0);
+/* 	} while (len != 0); */
 	
-	return 0;
-}
+/* 	return 0; */
+/* } */
 
 static void handler(int sig, siginfo_t *si, void *uc)
 {
 	int ret;
+	int finger;
 	int rlen;
 	struct gmsl_header header;
-	uint8_t response[J36_MAX_RESP_SIZE];
-	int finger;
-	
+	uint8_t response[J36_RESP_SIZE_MAX];
+
 	ret = j36_write_cmu_request(STATUS_NORMAL_W_HDCP, CMD_SEND_TOUCH_INFO,
 				    MODE_DIAG, BRIGHTNESS_NULL);
 	if (ret == -1)
@@ -202,7 +202,7 @@ read_fail:
 	j36_gmsl_flush_channel();
 }
 
-void timer_init(void)
+void j36_timer_init(void)
 {
 	timer_t timerid;
 	struct sigevent sev;
@@ -259,20 +259,30 @@ int main()
 	struct gmsl_header header;
 	uint8_t response[J36_MAX_RESP_SIZE];
 	int finger;
+	int i;
 
 	ret = j36_uinput_init();
 	if (ret < 0) {
 		puts("J36 Init err");
 		return -1;
-	}
-	
+	} 
+	puts("UINPUT registered");
+		
 	gmsl_fd = maxim_init(GMSL_UART, 230400, 1, 8, 'e', 0);
+	if (gmsl_fd < 0)
+		error(1, 0, "Maxim init err");
+
 	sleep(1);
-	j36_cmd_set_brightness(25);
-
-	timer_init();
-
-	while (1);
+	
+	ret = j36_cmd_set_brightness(25);
+	if (ret < 0)
+		error(1, 0, "Brightness set failed");
+	
+	j36_timer_init();
+	
+	while (1) 
+		sleep(1);
+	
 
 	/* while (1) { */
 		

@@ -95,7 +95,7 @@ int us_gpio_export(uint16_t gpio)
 
 	ret = us_gpio_request(gpio, GPIO_EXPORT);
 	if (ret == -1) {
-		printf("Error in unexporting pin %d", gpio);
+		printf("Error in exporting pin %d", gpio);
 		return -1;
 	}
 	
@@ -108,7 +108,7 @@ int us_gpio_unexport(uint16_t gpio)
 	
 	ret = us_gpio_request(gpio, GPIO_UNEXPORT);
 	if (ret == -1) {
-		printf("Error in exporting pin %d", gpio);
+		printf("Error in unexporting pin %d", gpio);
 		return -1;
 	}
 	
