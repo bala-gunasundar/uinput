@@ -18,7 +18,7 @@
 #define J36_MAX_READ_TIMES         30
 #define BRIGHTNESS_VAL             100	/* value to increment 1% */
 #define BRIGHTNESS_NULL            0
-#define BRIGHTNESS_DEFAULT         25	/* Percentage 0 - 100 */
+#define BRIGHTNESS_DEFAULT         40	/* Percentage 0 - 100 */
 #define J36_MAX_RESP_SIZE          50
 
 #define J36_NON_CALIB_VAL_X        (kanzi_calib / max_x) 

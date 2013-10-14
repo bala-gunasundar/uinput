@@ -212,5 +212,10 @@ int maxim_init(uint8_t *gmsl_uart, uint32_t speed, uint8_t stop_bits,
 	
 	uart_set_termios(fd, speed, stop_bits, data_bits, parity, flow_ctl);
 
+	/* Maxim registers should be configured to select parameters
+	 * like UART/I2C, Base mode/Bypassmode etc . Since by default
+	 * it is configured for UART Base mode it is left as it is.
+	 */
+ 
 	return fd;
 }

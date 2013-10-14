@@ -8,17 +8,16 @@
 #include <linux/input.h>
 #include <linux/uinput.h>
 #include <stdint.h>
-#include "gmsl_uart.h"
 #include <termios.h>
 #include <stdbool.h>
-#include "j36.h"
 #include <signal.h>
 #include <time.h>
+#include "gmsl_uart.h"
+#include "j36.h"
 #include "set_termios.h"
 
 #pragma pack(1)
 
-int fd;
 int gmsl_fd;
 
 #define SIG SIGRTMIN
@@ -51,113 +50,6 @@ uint8_t calculate_chksum(uint8_t * buf, int size, uint8_t base)
 
 	return base;
 }
-
-int write_packet(uint8_t *buf, uint8_t wsize)
-{
-	ssize_t wlen;
-	uint8_t len;
-	uint8_t *bufp;
-
-	bufp = buf;
-	len = wsize;
-
-	do {
-		wlen = write(gmsl_fd, bufp, len);
-		if (wlen == -1)
-			error(1, errno, "Error while writing to GMSL-UART");
-		bufp += wlen;
-		len -= wlen;
-	} while (len != 0);
-
-	tcdrain(fd);
-
-	return 0;
-}
-
-int read_packet_in_loop(uint8_t *buf, uint8_t rsize, uint8_t max_try)
-{
-	int i;
-	ssize_t rlen;
-	uint8_t *bufp;
-	uint8_t len;
-	uint8_t count;
-
-	bufp = buf;
-	len = rsize;
-	count = 0;
-
-	for (i = 0; i < max_try; i++) {
-		rlen = read(gmsl_fd, bufp, len);
-		if (rlen == -1) {
-			error(0, errno, "Error while reading GMSL-UART");
-			return -1;
-		}		
-		count += rlen;
-		len -= rlen;
-		if (len == 0)
-			break;
-		bufp += rlen;
-	}
-	
-	if (i > max_try)
-		error(0, 0, "J36: Read timeout");
-	
-	if (count == rsize)
-		return count;
-	else 
-		return -1;
-}
-
-/* int simulate_touch_event(void) */
-/* { */
-/* 	struct input_event ev[6]; */
-/* 	int i; */
-/* 	int ret; */
-/* 	uint8_t *bufp; */
-/* 	ssize_t wlen; */
-/* 	uint8_t len; */
-	
-/* 	memset(ev, 0, sizeof(ev)); */
-
-/* 	ev[0].type = EV_ABS; */
-/* 	ev[0].code = ABS_MT_TRACKING_ID; */
-/* 	ev[0].value = 0; */
-	
-/* 	ev[1].type = EV_ABS; */
-/* 	ev[1].code = ABS_MT_TOUCH_MAJOR; */
-/* 	ev[1].value = 255; */
-		
-/* 	ev[2].type = EV_ABS; */
-/* 	ev[2].code = ABS_MT_POSITION_X; */
-/* 	ev[2].value = 17920; */
-		
-/* 	ev[3].type = EV_ABS; */
-/* 	ev[3].code = ABS_MT_POSITION_Y; */
-/* 	ev[3].value = 16048; */
-		
-/* 	ev[4].type = EV_SYN; */
-/* 	ev[4].code = SYN_MT_REPORT; */
-		
-/* 	ev[5].type = EV_SYN; */
-/* 	ev[5].code= SYN_REPORT; */
-
-/* 	bufp = (uint8_t *) ev; */
-/* 	len = sizeof(ev); */
-
-/* 	do { */
-/* 		wlen = write(fd, bufp, sizeof(ev)); */
-/* 		if (wlen < 0) { */
-/* 			error(0, errno, "Error while inj events"); */
-/* 			return -1; */
-/* 		} */
-		
-/* 		bufp += wlen; */
-/* 		len -= wlen; */
-			
-/* 	} while (len != 0); */
-	
-/* 	return 0; */
-/* } */
 
 static void handler(int sig, siginfo_t *si, void *uc)
 {
@@ -199,7 +91,7 @@ static void handler(int sig, siginfo_t *si, void *uc)
 	}
 	
 read_fail:
-	j36_gmsl_flush_channel();
+	tcflush(gmsl_fd, TCIOFLUSH);
 }
 
 void j36_timer_init(void)
@@ -274,7 +166,7 @@ int main()
 
 	sleep(1);
 	
-	ret = j36_cmd_set_brightness(25);
+	ret = j36_cmd_set_brightness(BRIGHTNESS_DEFAULT);
 	if (ret < 0)
 		error(1, 0, "Brightness set failed");
 	
@@ -283,45 +175,4 @@ int main()
 	while (1) 
 		sleep(1);
 	
-
-	/* while (1) { */
-		
-	/* 	ret = j36_write_cmu_request(STATUS_NORMAL_W_HDCP, CMD_SEND_TOUCH_INFO, */
-	/* 				    MODE_DIAG, BRIGHTNESS_NULL); */
-	/* 	if (ret == -1) */
-	/* 		goto read_fail; */
-		
-	/* 	rlen = j36_read_disp_status(&header, response); */
-	/* 	if (rlen == -1) { */
-	/* 		printf("Error while reading touch response\n"); */
-	/* 		goto read_fail; */
-	/* 	} */
-
-	/* 	if (is_scr_touched(response)) { */
-	/* 		switch (header.no_bytes) { */
-	/* 		case ONE_FINGER: */
-	/* 			finger = 1; */
-	/* 			break; */
-	/* 		case TWO_FINGER: */
-	/* 			finger = 2; */
-	/* 			break; */
-	/* 		case THREE_FINGER: */
-	/* 			finger = 3; */
-	/* 			break; */
-	/* 		case FOUR_FINGER: */
-	/* 			finger = 4; */
-	/* 			break; */
-	/* 		} */
-			
-	/* 		j36_process_touch_data(response, finger); */
-	/* 	} */
-
-		
-	/* 	usleep(12000); */
-	/* 	continue; */
-		
-	/* read_fail: */
-	/* 	j36_gmsl_flush_channel(); */
-	/* 	continue; */
-	/* } */
 }

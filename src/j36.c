@@ -1,7 +1,64 @@
 #include "j36.h"
 
 static struct j36_events events[J36_MAX_FINGERS];
-extern int fd;
+int ufd;
+extern int gmsl_fd;
+
+int write_packet(uint8_t *buf, uint8_t wsize)
+{
+	ssize_t wlen;
+	uint8_t len;
+	uint8_t *bufp;
+
+	bufp = buf;
+	len = wsize;
+
+	do {
+		wlen = write(gmsl_fd, bufp, len);
+		if (wlen == -1)
+			error(1, errno, "Error while writing to GMSL-UART");
+		bufp += wlen;
+		len -= wlen;
+	} while (len != 0);
+
+	tcdrain(gmsl_fd);
+
+	return 0;
+}
+
+int read_packet_in_loop(uint8_t *buf, uint8_t rsize, uint8_t max_try)
+{
+	int i;
+	ssize_t rlen;
+	uint8_t *bufp;
+	uint8_t len;
+	uint8_t count;
+
+	bufp = buf;
+	len = rsize;
+	count = 0;
+
+	for (i = 0; i < max_try; i++) {
+		rlen = read(gmsl_fd, bufp, len);
+		if (rlen == -1) {
+			error(0, errno, "Error while reading GMSL-UART");
+			return -1;
+		}		
+		count += rlen;
+		len -= rlen;
+		if (len == 0)
+			break;
+		bufp += rlen;
+	}
+	
+	if (i > max_try)
+		error(0, 0, "J36: Read timeout");
+	
+	if (count == rsize)
+		return count;
+	else 
+		return -1;
+}
 
 int j36_report_touch_event(uint8_t fingers)
 {
@@ -58,7 +115,7 @@ int j36_report_touch_event(uint8_t fingers)
 			len = sizeof(ev);
 
 			do {
-				wlen = write(fd, bufp, sizeof(ev));
+				wlen = write(ufd, bufp, sizeof(ev));
 				if (wlen < 0)
 					error(1, errno, "Error while inj events");
 				bufp += wlen;
@@ -67,7 +124,7 @@ int j36_report_touch_event(uint8_t fingers)
 			} while (len != 0);
 				
 		} else if (status == RELEASE) {
-			/* Yet to fix since J36 not supporting release events */
+			/* J36 not supporting release events */
 		}
 	}
 
@@ -135,7 +192,7 @@ int j36_read_disp_status(struct gmsl_header *header, uint8_t *buf)
 	}
 
 status_fail:
-	j36_gmsl_flush_channel();
+	tcflush(gmsl_fd, TCIOFLUSH);
 	return -1;
 }
 
@@ -151,8 +208,8 @@ int j36_write_cmu_request(uint8_t status, uint8_t cmd,
 	request.header.dev_addr = ADDR_DESER_UC;
 	request.header.reg_addr = ADDR_REG_DEFAULT;
 	request.header.no_bytes =
-	    (sizeof(struct cmu_request) - sizeof(struct gmsl_header)) -
-	    SIZE_CHKSUM;
+		(sizeof(struct cmu_request) - sizeof(struct gmsl_header)) -
+		SIZE_CHKSUM;
 	request.msgid = MSGID_CMU_REQUEST;
 	request.status = status;
 	request.cmd = cmd;
@@ -212,37 +269,37 @@ int j36_uinput_init(void)
 	int ret;
 	struct uinput_user_dev uidev;
 
-	fd = open("/dev/uinput", O_WRONLY | O_NONBLOCK);
-	if (fd < 0) 
+	ufd = open("/dev/uinput", O_WRONLY | O_NONBLOCK);
+	if (ufd < 0) 
 		error(1, errno, "Open err");
 	
-	ret = ioctl(fd, UI_SET_EVBIT, EV_ABS);
+	ret = ioctl(ufd, UI_SET_EVBIT, EV_ABS);
 	if (ret < 0)
 		goto ioctl_err;
 
-	ret = ioctl(fd, UI_SET_EVBIT, EV_SYN);
+	ret = ioctl(ufd, UI_SET_EVBIT, EV_SYN);
 	if (ret < 0)
 		goto ioctl_err;
 
 	
-	ret = ioctl(fd, UI_SET_ABSBIT, ABS_MT_POSITION_X);
+	ret = ioctl(ufd, UI_SET_ABSBIT, ABS_MT_POSITION_X);
 	if (ret < 0)
 		goto ioctl_err;
 
-	ret = ioctl(fd, UI_SET_ABSBIT, ABS_MT_POSITION_Y);
+	ret = ioctl(ufd, UI_SET_ABSBIT, ABS_MT_POSITION_Y);
 	if (ret < 0)
 		goto ioctl_err;
 
-	ret = ioctl(fd, UI_SET_ABSBIT, ABS_MT_TOUCH_MAJOR);	
+	ret = ioctl(ufd, UI_SET_ABSBIT, ABS_MT_TOUCH_MAJOR);	
 	if (ret < 0)
 		goto ioctl_err;
 		
 
-	ret = ioctl(fd, UI_SET_ABSBIT, ABS_MT_WIDTH_MAJOR);
+	ret = ioctl(ufd, UI_SET_ABSBIT, ABS_MT_WIDTH_MAJOR);
 	if (ret < 0)
 		goto ioctl_err;
 
-	ret = ioctl(fd, UI_SET_ABSBIT, ABS_MT_TRACKING_ID);
+	ret = ioctl(ufd, UI_SET_ABSBIT, ABS_MT_TRACKING_ID);
 	if (ret < 0)
 		goto ioctl_err;
 
@@ -271,11 +328,11 @@ int j36_uinput_init(void)
 	uidev.absmax[ABS_MT_TRACKING_ID] = 3;
 
 	
-	ret = write(fd, &uidev, sizeof(uidev));
+	ret = write(ufd, &uidev, sizeof(uidev));
 	if (ret < 0)
 		goto ioctl_err;
 
-	ret = ioctl(fd, UI_DEV_CREATE);
+	ret = ioctl(ufd, UI_DEV_CREATE);
 	if (ret < 0)
 		goto ioctl_err;
 
@@ -285,10 +342,3 @@ ioctl_err:
 	puts("j36 init err");
 	return -1;
 }
-
-void j36_gmsl_flush_channel(void) 
-{
-	tcflush(fd, TCIOFLUSH);
-}
-
-
