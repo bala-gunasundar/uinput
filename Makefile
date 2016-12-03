@@ -1,6 +1,7 @@
 CC = arm-oe-linux-gnueabi-gcc 
 OBJS = main.o maxim.o set_termios.o us_gpio.o j36.o 
-INCLUDE_PATH = ../include
+INCLUDE_PATH = ./include
+VPATH = ./src
 
 j36 : $(OBJS)
 	$(CC) $(OBJS) -I$(INCLUDE_PATH) -lrt -o $@ 
